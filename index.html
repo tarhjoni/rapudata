@@ -290,6 +290,10 @@
           <button data-metric="isot">Isot</button>
           <button data-metric="pienet">Pienet</button>
         </div>
+        <div class="metric-toggle" id="chartTypeToggle">
+          <button data-ctype="bar" class="active">Pylväät</button>
+          <button data-ctype="line">Viiva</button>
+        </div>
         <div class="year-toggle" id="yearToggle"></div>
       </div>
     </div>
@@ -501,6 +505,17 @@ document.getElementById('metricToggle').addEventListener('click', e=>{
   updateCharts();
 });
 
+/* ---------- CHART TYPE TOGGLE (bar / line) ---------- */
+let chartType = 'bar';
+document.getElementById('chartTypeToggle').addEventListener('click', e=>{
+  if(e.target.tagName!=='BUTTON') return;
+  chartType = e.target.dataset.ctype;
+  [...document.querySelectorAll('#chartTypeToggle button')].forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  mainChart.config.type = chartType;
+  updateCharts();
+});
+
 /* ---------- MAIN GROUPED BAR CHART ---------- */
 const ctxMain = document.getElementById('mainChart');
 const mainChart = new Chart(ctxMain, {
@@ -550,14 +565,32 @@ const cumChart = new Chart(ctxCum, {
 });
 
 function updateCharts(){
-  // main bar chart
-  mainChart.data.datasets = years.filter(y=>activeYears.has(y)).map(y=>({
-    label:y,
-    data: days.map(d=>valueFor(y,d,metric)),
-    backgroundColor: colors[y],
-    borderRadius:4,
-    maxBarThickness:26
-  }));
+  // main chart (bar or line, toggled by chartType)
+  mainChart.data.datasets = years.filter(y=>activeYears.has(y)).map(y=>{
+    const series = days.map(d=>valueFor(y,d,metric));
+    if(chartType==='line'){
+      return {
+        label:y,
+        data: series,
+        borderColor: colors[y],
+        backgroundColor: colors[y]+'22',
+        pointBackgroundColor: colors[y],
+        pointRadius:4,
+        pointHoverRadius:6,
+        borderWidth:2.5,
+        tension:.25,
+        fill:false,
+        spanGaps:false
+      };
+    }
+    return {
+      label:y,
+      data: series,
+      backgroundColor: colors[y],
+      borderRadius:4,
+      maxBarThickness:26
+    };
+  });
   mainChart.update();
 
   // cumulative chart always uses total (isot+pienet) regardless of metric toggle,
