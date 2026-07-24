@@ -981,6 +981,41 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .legend-dot{
     width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:3px;
   }
+  .place-summary{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+    gap:12px; margin-bottom:18px;
+  }
+  .place-card{
+    background:rgba(255,255,255,0.03);
+    border:1px solid var(--glass-border);
+    border-radius:14px;
+    padding:14px 16px;
+  }
+  .place-card-head{
+    display:flex; align-items:center; gap:8px; margin-bottom:8px;
+  }
+  .place-card-head .legend-dot{ margin-top:0; box-shadow:0 0 6px currentColor; }
+  .place-card-name{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:13.5px; color:var(--text);
+  }
+  .place-card-total{
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:24px; color:var(--text);
+    margin-bottom:6px;
+  }
+  .place-card-total span{ font-size:13px; font-weight:400; color:var(--muted); }
+  .place-card-avg{
+    font-size:12px; color:var(--muted); margin-bottom:10px;
+    padding-bottom:10px; border-bottom:1px dashed var(--line);
+  }
+  .place-card-avg b{ color:var(--red); font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:13.5px; }
+  .place-card-avg-sub{
+    display:block; margin-top:2px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--muted);
+  }
+  .place-card-years{
+    display:flex; flex-direction:column; gap:3px;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--muted);
+  }
+  .place-card-years b{ color:var(--text); }
   .location-map .leaflet-control-attribution{
     background:rgba(5,15,28,0.75) !important; color:var(--muted) !important; font-size:10px !important;
   }
@@ -1053,8 +1088,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="panel-title">Pyyntipaikat
         <small>Mistä merrat on nostettu kunakin päivänä · Jääsjärvi, Hartola–Joutsa</small>
       </div>
+      <div class="controls">
+        <div class="year-toggle" id="locationYearToggle"></div>
+      </div>
     </div>
     <div id="locationMap" class="location-map"></div>
+    <div id="placeSummary" class="place-summary"></div>
     <div class="table-wrap">
       <table id="locationTable"></table>
     </div>
@@ -1504,19 +1543,23 @@ const dayPoints = {
 };
 
 const markerRefs = {};
+let activeLocationYears = new Set(locationYears);
+let locationMap = null;
+let locationMarkerLayer = null;
 
-if(locationYears.length){
-  document.getElementById('locationPanel').style.display = '';
+function renderLocationView(){
+  const activeYears = locationYears.filter(y => activeLocationYears.has(y));
+
   const locTable = document.getElementById('locationTable');
   let lthead = '<thead><tr><th class="daycol">Päivä</th>';
-  locationYears.forEach(y=> lthead += `<th style="text-align:left; color:${colors[y]}">${y}</th>`);
+  activeYears.forEach(y=> lthead += `<th style="text-align:left; color:${colors[y]}">${y}</th>`);
   lthead += '</tr></thead>';
   let ltbody = '<tbody>';
   days.forEach(d=>{
-    const rowHasData = locationYears.some(y => locationData[y][d]);
+    const rowHasData = activeYears.some(y => locationData[y][d]);
     if(!rowHasData) return;
     ltbody += `<tr><td class="daycol">${d}</td>`;
-    locationYears.forEach(y=>{
+    activeYears.forEach(y=>{
       const loc = locationData[y][d];
       if(!loc){ ltbody += `<td class="empty">–</td>`; return; }
       const pt = dayPoints[y] && dayPoints[y][d];
@@ -1529,11 +1572,66 @@ if(locationYears.length){
     ltbody += '</tr>';
   });
   ltbody += '</tbody>';
-  locTable.innerHTML = lthead + ltbody;
+  if(activeYears.length){
+    locTable.innerHTML = lthead + ltbody;
+  } else {
+    locTable.innerHTML = '<tbody><tr><td class="empty" style="padding:14px;">Valitse vähintään yksi vuosi nähdäksesi sijainnit.</td></tr></tbody>';
+  }
+
+  /* ---------- PAIKKAKOHTAINEN YHTEENVETO ---------- */
+  const placeTotals = {}; // { placeName: { totalIso, totalPieni, dayCount, byYear: { year: {iso,pieni} } } }
+  activeYears.forEach(y=>{
+    days.forEach(d=>{
+      const loc = locationData[y][d];
+      const catchVals = data[y] && data[y][d];
+      if(!loc || !catchVals) return;
+      if(!placeTotals[loc]) placeTotals[loc] = { totalIso:0, totalPieni:0, dayCount:0, byYear:{} };
+      placeTotals[loc].totalIso += catchVals[0];
+      placeTotals[loc].totalPieni += catchVals[1];
+      placeTotals[loc].dayCount += 1;
+      if(!placeTotals[loc].byYear[y]) placeTotals[loc].byYear[y] = { iso:0, pieni:0 };
+      placeTotals[loc].byYear[y].iso += catchVals[0];
+      placeTotals[loc].byYear[y].pieni += catchVals[1];
+    });
+  });
+
+  const placeSummaryEl = document.getElementById('placeSummary');
+  placeSummaryEl.innerHTML = Object.keys(placeTotals).map(place=>{
+    const pt = placeTotals[place];
+    const avgTotal = pt.totalIso + pt.totalPieni;
+    const avgPerDay = pt.dayCount ? avgTotal / pt.dayCount : 0;
+    const avgIsoPerDay = pt.dayCount ? pt.totalIso / pt.dayCount : 0;
+    const avgPieniPerDay = pt.dayCount ? pt.totalPieni / pt.dayCount : 0;
+    let dotColor = '#8fabc4';
+    outer:
+    for(const y of activeYears){
+      for(const d of days){
+        if(locationData[y][d] === place && dayPoints[y] && dayPoints[y][d]){
+          dotColor = dayPoints[y][d].color;
+          break outer;
+        }
+      }
+    }
+    const yearRows = Object.keys(pt.byYear).map(y=>
+      `<div>${y}: <b>${pt.byYear[y].iso + pt.byYear[y].pieni}</b> (${pt.byYear[y].iso} isoa, ${pt.byYear[y].pieni} pientä)</div>`
+    ).join('');
+    return `
+    <div class="place-card">
+      <div class="place-card-head">
+        <span class="legend-dot" style="background:${dotColor}; color:${dotColor};"></span>
+        <span class="place-card-name">${place}</span>
+      </div>
+      <div class="place-card-avg">Keskiarvo <b>${avgPerDay.toFixed(1)}</b> rapua / pyyntikerta
+        <span class="place-card-avg-sub">(${avgIsoPerDay.toFixed(1)} isoa, ${avgPieniPerDay.toFixed(1)} pientä · ${pt.dayCount} pyyntikertaa)</span>
+      </div>
+      <div class="place-card-total">${pt.totalIso + pt.totalPieni} <span>rapua yhteensä</span></div>
+      <div class="place-card-years">${yearRows}</div>
+    </div>`;
+  }).join('');
 
   /* ---------- LOCATION MAP (Leaflet) ---------- */
   const markers = [];
-  locationYears.forEach(y=>{
+  activeYears.forEach(y=>{
     days.forEach(d=>{
       const loc = locationData[y][d];
       const pt = dayPoints[y] && dayPoints[y][d];
@@ -1544,23 +1642,34 @@ if(locationYears.length){
     });
   });
 
+  Object.keys(markerRefs).forEach(k => delete markerRefs[k]);
+
   if(markers.length){
-    const map = L.map('locationMap', { scrollWheelZoom:false }).setView([61.62, 26.17], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap-avustajat',
-      maxZoom: 18
-    }).addTo(map);
+    document.getElementById('locationMap').style.display = '';
+    if(!locationMap){
+      locationMap = L.map('locationMap', { scrollWheelZoom:false }).setView([61.62, 26.17], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap-avustajat',
+        maxZoom: 18
+      }).addTo(locationMap);
+      locationMarkerLayer = L.layerGroup().addTo(locationMap);
+    } else {
+      locationMarkerLayer.clearLayers();
+    }
 
     const bounds = [];
     markers.forEach(m=>{
       bounds.push(m.coord);
       const icon = L.divIcon({ className:'', html:`<div class="crab-marker" style="background:${m.color}"></div>`, iconSize:[16,16] });
-      const marker = L.marker(m.coord, { icon }).addTo(map);
+      const marker = L.marker(m.coord, { icon });
       const popupHtml = `<div class="crab-popup"><b>${m.day} (${m.year})</b><br>${m.place}<br>${m.catchText}</div>`;
       marker.bindPopup(popupHtml);
+      marker.addTo(locationMarkerLayer);
       markerRefs[`${m.year}_${m.day}`] = marker;
     });
-    if(bounds.length > 1){ map.fitBounds(bounds, { padding:[50,50] }); }
+    if(bounds.length > 1){ locationMap.fitBounds(bounds, { padding:[50,50] }); }
+    else if(bounds.length === 1){ locationMap.setView(bounds[0], 14); }
+    setTimeout(()=>{ if(locationMap) locationMap.invalidateSize(); }, 50);
 
     // Hover taulukon rivillä -> korosta vastaava merkki kartalla
     document.querySelectorAll('.loc-row-hover').forEach(el=>{
@@ -1581,6 +1690,31 @@ if(locationYears.length){
   } else {
     document.getElementById('locationMap').style.display = 'none';
   }
+}
+
+if(locationYears.length){
+  document.getElementById('locationPanel').style.display = '';
+
+  const locYearToggleEl = document.getElementById('locationYearToggle');
+  locationYears.forEach(y=>{
+    const chip = document.createElement('div');
+    chip.className = 'year-chip on';
+    chip.style.setProperty('--chip-color', colors[y]);
+    chip.dataset.year = y;
+    chip.innerHTML = `<span class="dot" style="background:${colors[y]}"></span>${y}`;
+    chip.addEventListener('click', ()=>{
+      if(activeLocationYears.has(y)){
+        if(activeLocationYears.size === 1) return; // vähintään yksi vuosi valittuna
+        activeLocationYears.delete(y); chip.classList.remove('on'); chip.classList.add('off');
+      } else {
+        activeLocationYears.add(y); chip.classList.add('on'); chip.classList.remove('off');
+      }
+      renderLocationView();
+    });
+    locYearToggleEl.appendChild(chip);
+  });
+
+  renderLocationView();
 }
 
 /* ---------- TABLE ---------- */
