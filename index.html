@@ -1214,6 +1214,16 @@ const data = {
 const years = ["2023","2024","2025","2026"];
 const colors = {2023:"#4f7ea8", 2024:"#6fb5a8", 2025:"#e0a83c", 2026:"#e2483a"};
 
+// Päivät, jolloin ei ole varsinaisesti ravustettu (esim. sään takia) — saalis näytetään silti
+// nollana kaavioissa ja taulukoissa, mutta näitä päiviä EI lasketa mukaan keskiarvolaskentaan
+// eikä "pyyntipäivää kirjattu" -laskureihin.
+const nonFishingDays = {
+  2026: new Set(["25.7.","26.7."])
+};
+function isNonFishingDay(y, d){
+  return !!(nonFishingDays[y] && nonFishingDays[y].has(d));
+}
+
 // Pyyntipaikat: mistä rapumerrat on nostettu kyseisenä päivänä
 const locationData = {
   2026: {
@@ -1289,7 +1299,10 @@ years.forEach(y=>{
   let bigSum=0, smallSum=0, dayCount=0;
   days.forEach(d=>{
     const v = data[y][d];
-    if(v){ bigSum+=v[0]; smallSum+=v[1]; dayCount++; }
+    if(v){
+      bigSum+=v[0]; smallSum+=v[1];
+      if(!isNonFishingDay(y,d)) dayCount++;
+    }
   });
   const avg = dayCount ? (bigSum+smallSum)/dayCount : 0;
   const avgBig = dayCount ? bigSum/dayCount : 0;
@@ -1544,13 +1557,10 @@ const dayPoints = {
   2026: {
     "22.7.": { coord:[61.6204, 26.1953], color:'#e2483a' }, // punainen
     "23.7.": { coord:[61.6218, 26.1952], color:'#a855c9' }, // violetti
-    "24.7.": { coord:[61.6221, 26.1580], color:'#4caf6a' }, // vihreä
-    // 25.–27.7.: sama pyyntipaikka (Niemistenkärki), mutta selvästi pohjoisempana kuin 24.7. —
-    // korjattu käyttäjän toisen karttaotteen perusteella. Pieni keskinäinen sirottelu, jotta
-    // kolme lähekkäistä merkkiä eivät mene täysin päällekkäin. Arvioitu, ei täysin tarkka GPS.
-    "25.7.": { coord:[61.62445, 26.15960], color:'#e0a83c' }, // oranssi
-    "26.7.": { coord:[61.62410, 26.16040], color:'#22d3ee' }, // syaani
-    "27.7.": { coord:[61.62470, 26.16080], color:'#ec4899' }  // pinkki
+    "24.7.": { coord:[61.620830, 26.160572], color:'#4caf6a' }, // vihreä — käyttäjän antama tarkka koordinaatti
+    "25.7.": { coord:[61.622767, 26.160753], color:'#e0a83c' }, // oranssi — käyttäjän antama tarkka koordinaatti
+    "26.7.": { coord:[61.622925, 26.161055], color:'#22d3ee' }, // syaani — käyttäjän antama tarkka koordinaatti
+    "27.7.": { coord:[61.623140, 26.161267], color:'#ec4899' }  // pinkki — käyttäjän antama tarkka koordinaatti
   }
 };
 
@@ -1600,7 +1610,7 @@ function renderLocationView(){
       if(!placeTotals[loc]) placeTotals[loc] = { totalIso:0, totalPieni:0, dayCount:0, byYear:{} };
       placeTotals[loc].totalIso += catchVals[0];
       placeTotals[loc].totalPieni += catchVals[1];
-      placeTotals[loc].dayCount += 1;
+      if(!isNonFishingDay(y,d)) placeTotals[loc].dayCount += 1;
       if(!placeTotals[loc].byYear[y]) placeTotals[loc].byYear[y] = { iso:0, pieni:0 };
       placeTotals[loc].byYear[y].iso += catchVals[0];
       placeTotals[loc].byYear[y].pieni += catchVals[1];
