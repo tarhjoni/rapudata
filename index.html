@@ -1077,7 +1077,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </div>
     <div class="season-card">
       <div class="label">Pyyntikausi</div>
-      <div class="range">21.7. – 1.8.</div>
+      <div class="range">21.7. – 2.8.</div>
     </div>
   </div>
 
@@ -1190,24 +1190,24 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </div>
 
 <script>
-const days = ["22.7.","23.7.","24.7.","25.7.","26.7.","27.7.","28.7.","29.7.","30.7.","31.7.","1.8."];
+const days = ["22.7.","23.7.","24.7.","25.7.","26.7.","27.7.","28.7.","29.7.","30.7.","31.7.","1.8.","2.8."];
 
 const data = {
   2023: {
     "22.7.":[31,44], "23.7.":[18,31], "24.7.":[18,31], "25.7.":[14,15], "26.7.":[20,20],
-    "27.7.":null, "28.7.":null, "29.7.":null, "30.7.":null, "31.7.":null, "1.8.":null
+    "27.7.":null, "28.7.":null, "29.7.":null, "30.7.":null, "31.7.":null, "1.8.":null, "2.8.":null
   },
   2024: {
     "22.7.":[22,25], "23.7.":[24,28], "24.7.":[20,31], "25.7.":[23,43], "26.7.":[10,31],
-    "27.7.":[23,33], "28.7.":[11,16], "29.7.":[13,19], "30.7.":null, "31.7.":null, "1.8.":[17,49]
+    "27.7.":[23,33], "28.7.":[11,16], "29.7.":[13,19], "30.7.":null, "31.7.":null, "1.8.":[17,49], "2.8.":null
   },
   2025: {
     "22.7.":[42,66], "23.7.":[23,27], "24.7.":[31,20], "25.7.":[22,21], "26.7.":[17,20],
-    "27.7.":[15,29], "28.7.":[16,17], "29.7.":null, "30.7.":null, "31.7.":null, "1.8.":null
+    "27.7.":[15,29], "28.7.":[16,17], "29.7.":null, "30.7.":null, "31.7.":null, "1.8.":null, "2.8.":null
   },
   2026: {
     "22.7.":[38,36], "23.7.":[35,29], "24.7.":[22,26], "25.7.":[0,0], "26.7.":[0,0],
-    "27.7.":[19,22], "28.7.":[16,20], "29.7.":[39,20], "30.7.":[24,20], "31.7.":[11,18], "1.8.":null
+    "27.7.":[19,22], "28.7.":[16,20], "29.7.":[39,20], "30.7.":[24,20], "31.7.":[11,18], "1.8.":[17,26], "2.8.":[16,20]
   }
 };
 
@@ -1236,7 +1236,9 @@ const locationData = {
     "28.7.":"Niemistenkärki",
     "29.7.":"Pirttisaaren eteläpuoli",
     "30.7.":"Pirttisaaren eteläpuoli",
-    "31.7.":"Pirttisaaren eteläpuoli"
+    "31.7.":"Pirttisaaren eteläpuoli",
+    "1.8.":"Pirttisaaren eteläpuoli",
+    "2.8.":"Pirttisaaren eteläpuoli"
   }
 };
 
@@ -1246,7 +1248,8 @@ const salesLog = {
   2026: [
     { date:"24.7.", isoSold:20, pieniSold:20, isoDecrease:23, pieniDecrease:25 },
     { date:"29.7.", isoSold:40, pieniSold:0, isoDecrease:45, pieniDecrease:0 },
-    { date:"30.7.", isoSold:20, pieniSold:20, isoDecrease:22, pieniDecrease:24 }
+    { date:"30.7.", isoSold:20, pieniSold:20, isoDecrease:22, pieniDecrease:24 },
+    { date:"1.8.", isoSold:0, pieniSold:40, isoDecrease:0, pieniDecrease:48 }
   ]
 };
 
@@ -1269,7 +1272,9 @@ const weatherData = {
     "27.7.":{keski:17,   max:19.6, min:14.4,sade:6.2},
     "28.7.":{keski:15,   max:17.7, min:13.7,sade:null},
     "29.7.":{keski:15.6, max:21.7, min:10.1,sade:-1},
-    "30.7.":{keski:18.7, max:25.3, min:9.9, sade:null}
+    "30.7.":{keski:18.7, max:25.3, min:9.9, sade:null},
+    "31.7.":{keski:19.8, max:26.6, min:15.8,sade:9.9},
+    "1.8.":{keski:18.3,  max:23.4, min:15.3,sade:-1}
   },
   2025: {
     "22.7.":{keski:21.3, max:27.3, min:16.2, sade:-1},
@@ -1574,7 +1579,11 @@ const dayPoints = {
     "28.7.": { coord:[61.625177, 26.162209], color:'#eab308' }, // keltainen — käyttäjän antama tarkka koordinaatti
     "29.7.": { coord:[61.617129, 26.196094], color:'#38bdf8' }, // vaaleansininen — käyttäjän antama tarkka koordinaatti
     "30.7.": { coord:[61.616264, 26.196285], color:'#84cc16' }, // limenvihreä — käyttäjän antama tarkka koordinaatti
-    "31.7.": { coord:[61.613989, 26.196322], color:'#f97316' }  // oranssinpunainen — käyttäjän antama tarkka koordinaatti
+    "31.7.": { coord:[61.613989, 26.196322], color:'#f97316' }, // oranssinpunainen — käyttäjän antama tarkka koordinaatti
+    // 1.8. ja 2.8.: ei GPS-koordinaattia saatavilla (Google Maps ei toiminut) — sijoitettu
+    // käyttäjän pyynnöstä "pallon verran etelään" edellisestä pisteestä, ei tarkka mittaus
+    "1.8.": { coord:[61.613589, 26.196322], color:'#8b5cf6' }, // indigo — suuntaa-antava, etelään 31.7. pisteestä
+    "2.8.": { coord:[61.613189, 26.196322], color:'#14b8a6' }  // sammal/teal — suuntaa-antava, etelään 1.8. pisteestä
   }
 };
 
